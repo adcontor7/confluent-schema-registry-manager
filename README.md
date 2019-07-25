@@ -1,0 +1,6 @@
+# Confluent Schema registry Manager
+
+ 
+ 
+
+
