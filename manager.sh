@@ -9,11 +9,22 @@ SCHEMA_DIR=schemas-latest
 ACTION=
 SCHEMA_NAME=
 
+
+
+
 # jq must be installed sudo apt-get install jq
 export_schema () {
 	export TOPIC=$1
 	echo "$SCHEMA_DIR/$TOPIC.avsc exporting ..."
-	curl $REGISTRY_URL/subjects/$TOPIC/versions/$SCHEMA_VERSION | jq -r '.schema|fromjson' > $SCHEMA_DIR/$TOPIC.avsc	
+	if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    	curl $REGISTRY_URL/subjects/$TOPIC/versions/$SCHEMA_VERSION | jq -r '.schema|fromjson' > $SCHEMA_DIR/$TOPIC.avsc	
+	elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
+		echo "MINGW32_NT"
+		curl $REGISTRY_URL/subjects/$TOPIC/versions/$SCHEMA_VERSION | ./jq-win32.exe -r '.schema|fromjson' > $SCHEMA_DIR/$TOPIC.avsc
+	elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
+		echo "MINGW64_NT"
+		curl $REGISTRY_URL/subjects/$TOPIC/versions/$SCHEMA_VERSION | ./jq-win64.exe -r '.schema|fromjson' > $SCHEMA_DIR/$TOPIC.avsc
+	fi
 }
 
 export_all_schemas () {
@@ -65,10 +76,13 @@ schema_exists () {
     return $in
 }
 
+
+
+
 while [ -n "$1" ]; do # while loop starts
  
     case "$1" in
-
+	
     -registry) 
         REGISTRY_URL=${2}
         shift
