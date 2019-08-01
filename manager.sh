@@ -35,31 +35,60 @@ export_all_schemas () {
 }
 
 import_schema () {
-	echo "$TOPIC Schema will be overwritten. Are you sure? (Y|N)"
-	read sure
-	if [ -z "$sure" ] || ([ $sure != "Y" ] && [ $sure != "y" ])
-	then
-	   echo "Nothing will be imported."
-	   return 0
+    export TOPIC=$1
+	local massive=$2
+	if [ -z "$massive" ]; then	
+		echo "$TOPIC Schema will be overwritten. Are you sure? (Y|N)"
+		read sure
+		if [ -z "$sure" ] || ([ $sure != "Y" ] && [ $sure != "y" ])
+		then
+		   echo "Nothing will be imported."
+		   return 0
+		fi
 	fi
 
-	export TOPIC=$1
-	export SCHEMA=$(jq tostring $SCHEMA_PATH/$SCHEMA_DIR/$TOPIC.avsc)
+	
+	if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    	export SCHEMA=$(jq tostring $SCHEMA_PATH/$SCHEMA_DIR/$TOPIC.avsc)	
+	elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW32_NT" ]; then
+		export SCHEMA=$(./jq-win32.exe tostring $SCHEMA_PATH/$SCHEMA_DIR/$TOPIC.avsc)
+	elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
+		export SCHEMA=$(./jq-win64.exe tostring $SCHEMA_PATH/$SCHEMA_DIR/$TOPIC.avsc)
+	fi
+	
 	
 	if [ -z "$SCHEMA" ]
 	then
 	   echo "$SCHEMA_PATH/$SCHEMA_DIR/$TOPIC.avsc File not found"
 	else
 		echo "$SCHEMA_PATH/$SCHEMA_DIR/$TOPIC.avsc importing ..."
-		echo "{\"schema\":$SCHEMA}"
+		if [ -z "$massive" ]; then
+			echo "{\"schema\":$SCHEMA}"
+		fi
+		
+		
 		curl -XPOST -H "Content-Type: application/vnd.schemaregistry.v1+json" -d"{\"schema\":$SCHEMA}" $REGISTRY_URL/subjects/$TOPIC/versions
+#		curl -XPOST -H "Content-Type: application/vnd.schemaregistry.v1+json" -d @- $REGISTRY_URL/subjects/$TOPIC/versions <<EOF
+#{"schema":"$SCHEMA"}
+#EOF
+		 
+		
 	fi
 }
 
 import_all_schemas () {
+
+	echo "$TOPIC Schemas will be overwritten. Are you sure? (Y|N)"
+	read sure
+	if [ -z "$sure" ] || ([ $sure != "Y" ] && [ $sure != "y" ])
+	then
+	   echo "Nothing will be imported."
+	   return 0
+	fi
+	
 	for i in "${SCHEMAS[@]}"
 	do
-		import_schema $i
+		import_schema $i 1
 	done
 }
 
